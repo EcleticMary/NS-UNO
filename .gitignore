@@ -1,0 +1,7 @@
+data/
+data_gorda/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/

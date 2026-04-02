@@ -1,18 +1,10 @@
-""" This code was for using pressure but from article of Marcio"""
 # We also import few more libraries to plots,
 # time measurements, and the creation of the normalizing flow
 import numpy as np
 import pandas as pd
-import sklearn
-#import pyarrow
-from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-import glob
-import time
-import torch.utils.data
 from scipy import interpolate
-from sklearn.preprocessing import StandardScaler
 from config import *
 
 
@@ -22,66 +14,16 @@ with open(param_path, 'w') as data:
     data.write(str(args))
 
 # Set seeds for reproducibility
-torch.manual_seed(args.seeds)
-np.random.seed(args.seeds)
-
-DF_=pd.read_csv(DIRDATA_poly+"DF_final.csv")
-EOS_=pd.read_csv(DIRDATA_poly+"EOS_final.csv")
-MR_=pd.read_csv(DIRDATA_poly+"MR_final.csv")
-
-n=np.linspace(0.13,1.28,20)
-
-eos=EOS_.groupby('Modelo').apply(lambda x: interpolate.interp1d(
-        x=x.n,
-        y=x.p,
-        kind='cubic')(n) )
-
-P=pd.DataFrame(np.array([eos.iloc[j] for j in range(eos.shape[0])]),columns=n)
-P['Modelo']=eos.index
-train_ID, test_ID = train_test_split(DF_.Modelo, test_size=0.1, random_state=100) 
-MR_test=MR_[MR_.Modelo.isin(test_ID)]
-MR_train=MR_[MR_.Modelo.isin(train_ID)]
-MR_train['Modelo']=MR_train['Modelo'].astype(int).apply(lambda x: f"pt_{str(x)}")
-MR_test['Modelo']=MR_test['Modelo'].astype(int).apply(lambda x: f"pt_{str(x)}")
-p_train=P[P.Modelo.isin(train_ID)].iloc[:,:-1]
-p_test=P[P.Modelo.isin(test_ID)].iloc[:,:-1]
-p_train.index=[f"{i}" for i in MR_train['Modelo'].unique()]
-p_test.index=[f"{i}" for i in MR_test['Modelo'].unique()]
-grouped_MR_train = MR_train.groupby('Modelo')
-
-test_ID=["pt_"+str(test_ID.iloc[j]) for j in range(test_ID.shape[0])]
-
-### esta parte é calulada à parte para o dataset ser criado mais rápido
-interpolation_dict = {
-    row_id: interpolate.interp1d(
-        x=grouped_MR_train.get_group(row_id)['M'],
-        y=grouped_MR_train.get_group(row_id)['R'],
-        kind='linear'
-    )
-    for row_id in p_train.index.unique()
-}
-
-
-interpolation_dict2 = {
-    row_id: interpolate.interp1d(
-        x=grouped_MR_train.get_group(row_id)['M'],
-        y=grouped_MR_train.get_group(row_id)['Lambda'],
-        kind='linear'
-    )
-    for row_id in p_train.index.unique()
-}
-
-
-M_max=MR_train.groupby('Modelo').apply(lambda x: x.M.max())
-
+torch.manual_seed(args.seed)
+np.random.seed(args.seed)
 
 def build_samples(
     ID_list,
     stdM,
     stdR,
+    M_max,
+    interpolation_dict,
     rand=False,
-    M_max=M_max,
-    interpolation_dict=interpolation_dict,
     N_min=5,
     N_max=40,
     n_draws=300,
@@ -206,7 +148,7 @@ def collate_fn(batch):
             x_padded[i, j, :n] = star
             mask[i, j, :n] = True
 
-    return torch.tensor(x_padded), torch.tensor(mask)#, torch.tensor(np.stack(eos_list))
+    return x_padded, mask
 
 
 
@@ -236,6 +178,60 @@ def make_batch_from_samples(samples):
         x_star = torch.tensor(x_star, dtype=torch.float32)
         batch.append(x_star)
     return batch  # wrapped in outer list for batch size = 1
+
+ #### for PT ######
+
+DF_=pd.read_csv(DATA_POLY_DIR / "DF_final.csv")
+EOS_=pd.read_csv(DATA_POLY_DIR / "EOS_final.csv")
+MR_=pd.read_csv(DATA_POLY_DIR / "MR_final.csv")
+
+n=np.linspace(0.13,1.28,20)
+
+eos=EOS_.groupby('Modelo').apply(lambda x: interpolate.interp1d(
+        x=x.n,
+        y=x.p,
+        kind='cubic')(n) )
+
+P_pt=pd.DataFrame(np.array([eos.iloc[j] for j in range(eos.shape[0])]),columns=n)
+P_pt['Modelo']=eos.index
+train_ID, test_ID = train_test_split(DF_.Modelo, test_size=0.1, random_state=100) 
+MR_train = MR_[MR_.Modelo.isin(train_ID)].copy()
+MR_test = MR_[MR_.Modelo.isin(test_ID)].copy()
+MR_train['Modelo']=MR_train['Modelo'].astype(int).apply(lambda x: f"pt_{str(x)}")
+MR_test['Modelo']=MR_test['Modelo'].astype(int).apply(lambda x: f"pt_{str(x)}")
+
+p_train=P_pt[P_pt.Modelo.isin(train_ID)].iloc[:,:-1]
+p_test=P_pt[P_pt.Modelo.isin(test_ID)].iloc[:,:-1]
+p_train.index=[f"{i}" for i in MR_train['Modelo'].unique()]
+p_test.index=[f"{i}" for i in MR_test['Modelo'].unique()]
+grouped_MR_train = MR_train.groupby('Modelo')
+
+test_ID=["pt_"+str(test_ID.iloc[j]) for j in range(test_ID.shape[0])]
+
+### esta parte é calulada à parte para o dataset ser criado mais rápido
+interpolation_dict = {
+    row_id: interpolate.interp1d(
+        x=grouped_MR_train.get_group(row_id)['M'],
+        y=grouped_MR_train.get_group(row_id)['R'],
+        kind='linear'
+    )
+    for row_id in p_train.index.unique()
+}
+
+
+interpolation_dict2 = {
+    row_id: interpolate.interp1d(
+        x=grouped_MR_train.get_group(row_id)['M'],
+        y=grouped_MR_train.get_group(row_id)['Lambda'],
+        kind='linear'
+    )
+    for row_id in p_train.index.unique()
+}
+
+
+M_max_pt=MR_train.groupby('Modelo').apply(lambda x: x.M.max())
+
+
    
 train_ID_, val_ID_ = train_test_split(np.unique(p_train.index.values), test_size=0.1, random_state=11)
 
@@ -244,22 +240,13 @@ x_train = p_train.loc[train_ID_]
 x_val =p_train.loc[val_ID_]
 x_test = p_test.loc[test_ID]
 
-d=build_samples(train_ID_,0.1,0.3,rand=True),build_samples(val_ID_,0.1,0.3,rand=True)
-
+#############################
  #### for GP ######
-DIRDATA_gorda="/localdata/CNF_3/CNF_4/data_gorda/"
-# Fixing seeds for reproducibility
-torch.manual_seed(1)
-np.random.seed(1) # como tens uma seed consegues fixar as samples depois
+#############################
+
 # --- Data Loading ---
-with open(DIRDATA_gorda+"EoS_ensemble.pickle", "rb") as f:
+with open(DATA_GORDA_DIR /"EoS_ensemble.pickle", "rb") as f:
     df, n_gp = pickle.load(f)
-
-n_=np.linspace(0.13,1.28,20)
-
-# Set seeds for reproducibility
-torch.manual_seed(args.seeds)
-np.random.seed(args.seeds)
 
 
 # Data preprocessing steps:
@@ -272,7 +259,7 @@ df.reset_index(drop=True, inplace=True)
 R = pd.DataFrame(np.array([df.r.iloc[j] for j in range(df.shape[0])]))
 M = pd.DataFrame(np.array([df.m.iloc[j] for j in range(df.shape[0])]))
 """estou a apssar de GeV para MeV a Pressao"""
-P = pd.DataFrame(np.array([df.p.iloc[j] for j in range(df.shape[0])]))*(10**3) 
+P_gp = pd.DataFrame(np.array([df.p.iloc[j] for j in range(df.shape[0])]))*(10**3) 
 # E = pd.DataFrame(np.array([df.e.iloc[j] for j in range(df.shape[0])]))
 L = pd.DataFrame(np.array([df.L.iloc[j] for j in range(df.shape[0])]))
 
@@ -280,13 +267,13 @@ L = pd.DataFrame(np.array([df.L.iloc[j] for j in range(df.shape[0])]))
 Likeli = df.iloc[:, -4] * df.iloc[:, -3] * df.iloc[:, -2] * df.iloc[:, -1]  # model likelihood
 M.dropna(axis=1, inplace=True)
 R.dropna(axis=1, inplace=True)
-M_max = df.mmax
+
 
 # Create interpolator for VS values
 """This needs to be here and not after lambda filtering because VS does not have the ID order which is the index"""
 interpolator = interpolate.interp1d(
     x=n_gp * 0.16,
-    y=P,
+    y=P_gp,
     kind='linear',
     fill_value="extrapolate"
 )
@@ -308,12 +295,12 @@ M_N = M_N[~M_N.isin({'ID': np.where(GRo == True)[0]})].dropna()
 L_N = L_N[~L_N.isin({'ID': np.where(GRo == True)[0]})].dropna()
 M_N['ID'] = M_N['ID'].astype(int).apply(lambda x: f"gp_{str(x)}")
 R_N['ID'] = R_N['ID'].astype(int).apply(lambda x: f"gp_{str(x)}")
-P.index=[f"gp_{i}" for i in range(len(P))]
-P = P.loc[M_N.ID.drop_duplicates().values]
+P_gp.index=[f"gp_{i}" for i in range(len(P_gp))]
+P_gp = P_gp.loc[M_N.ID.drop_duplicates().values]
 
 
 
-train_IDgp, test_IDgp = train_test_split(P.index, test_size=0.1, random_state=11)
+train_IDgp, test_IDgp = train_test_split(P_gp.index, test_size=0.1, random_state=11)
 grouped_M = M_N.groupby('ID')
 grouped_R = R_N.groupby('ID')
 MRL_N=pd.concat([M_N,R_N.R,L_N.L],axis=1)
@@ -337,10 +324,9 @@ interpolation_dict_gp = {
     )
     for row_id in train_IDgp
 }
-max_mass = grouped_M['M'].max().max()
-int_ = np.round(np.arange(1.0, max_mass + 0.03, 0.03), 7)
 
-M_max=MR_train.groupby('Modelo').apply(lambda x: x.M.max())
+
+M_max_pt=MR_train.groupby('Modelo').apply(lambda x: x.M.max())
 """ P does not have negative values but Because of the interpolation of n, p haves some negative values:"""
 train_IDgp=train_IDgp[~train_IDgp.isin(pd.DataFrame(p).iloc[np.where(pd.DataFrame(p)<0)[0]].index)]# isto tem que ser primeiro, se não o p já não tem os valores
 p=pd.DataFrame(p).drop(pd.DataFrame(p).iloc[np.where(pd.DataFrame(p)<0)[0]].index)
@@ -349,7 +335,6 @@ p.index=[f"gp_{i}" for i in range(len(p))]
 train_ID_gp, val_ID_gp = train_test_split(train_IDgp, test_size=0.1, random_state=11)
 
 x_train_gp = p.loc[train_ID_gp]
-
 x_val_gp = p.loc[val_ID_gp]
 x_test_gp = p.loc[test_IDgp]
 
@@ -360,8 +345,6 @@ x_val_gp.columns=n
 df=df.loc[np.where(GRo == False)[0]]
 df.index=MRL_N.ID.unique()
 M_max_gp = df.mmax
-# d_gp=build_samples(train_ID_gp,0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict_gp, M_max=M_max_gp, N_min=5, N_max=40, n_draws=300,
-#                         rho_low=-0.5, rho_high=0.5)
 
 X_train=pd.concat((x_train,x_train_gp))
 X_val=pd.concat((x_val,x_val_gp))
@@ -372,40 +355,30 @@ X_test=pd.concat((x_test,x_test_gp))
 x_train_s,x_val_s= np.log10(X_train.astype('float32')),np.log10(X_val.astype('float32'))
 x_train_s,x_val_s=pd.DataFrame(np.repeat(x_train_s,args.no,axis=0)).values,pd.DataFrame(np.repeat(x_val_s,args.no,axis=0)).values
 
-# training_set = Dataset(eos_new,dataset_creation(0,0)[0])
-print(x_train.shape,x_val_s.shape)
-print('x_train',x_train_s)
 """ to check if dataset is being well created"""
-# p_train=p_train.reset_index()
 
-# training_set = Dataset(eos_new,dataset_creation(0,0)[0])
-print(x_train_s.shape,x_val_s.shape)
-print('x_train',x_train_s)
-""" to check if dataset is being well created"""
 
 fig, ax = plt.subplots(figsize=(5,4), ncols=1, nrows=1, sharex=True, sharey='row', layout='constrained')
 
 plt.plot(n,x_train_s[0,],'o')
 plt.plot(n,x_train_s[1],'o')
-# plt.plot(EOS_[EOS_.Modelo==x_train.Modelo[0]].n,np.log10(EOS_[EOS_.Modelo==x_train.Modelo[0]].p))
-# plt.plot(EOS_[EOS_.Modelo==x_train.Modelo[1]].n,np.log10(EOS_[EOS_.Modelo==x_train.Modelo[1]].p))
-plt.savefig(DATADIR+f"p_{args.set_name}.pdf")
+plt.savefig(OUTPUT_DIR /f"p_{args.set_name}.pdf")
 
-if args.Lambda:
-    fig, ax = plt.subplots(figsize=(5,4), ncols=1, nrows=1, sharex=True, sharey='row', layout='constrained')
-    eos=20
-    plt.plot(10**d[-2].iloc[eos,-15:],d[-2].iloc[eos,-30:-15],'o')
-    plt.plot(MR_train[MR_train["Modelo"].isin([x_train.iloc[eos,0]])].Lambda,MR_train[MR_train["Modelo"].isin([x_train.iloc[eos,0]])].M)
+# if args.Lambda:
+#     fig, ax = plt.subplots(figsize=(5,4), ncols=1, nrows=1, sharex=True, sharey='row', layout='constrained')
+#     eos=20
+#     plt.plot(10**d[-2].iloc[eos,-15:],d[-2].iloc[eos,-30:-15],'o')
+#     plt.plot(MR_train[MR_train["Modelo"].isin([x_train.iloc[eos,0]])].Lambda,MR_train[MR_train["Modelo"].isin([x_train.iloc[eos,0]])].M)
 
-    eos=30
-    plt.plot(10**d[-2].iloc[eos,-15:],d[-2].iloc[eos,-30:-15],'o')
-    plt.plot(MR_train[MR_train["Modelo"].isin([x_train.iloc[eos,0]])].Lambda,MR_train[MR_train["Modelo"].isin([x_train.iloc[eos,0]])].M)
+#     eos=30
+#     plt.plot(10**d[-2].iloc[eos,-15:],d[-2].iloc[eos,-30:-15],'o')
+#     plt.plot(MR_train[MR_train["Modelo"].isin([x_train.iloc[eos,0]])].Lambda,MR_train[MR_train["Modelo"].isin([x_train.iloc[eos,0]])].M)
 
-    plt.xlim(0,2000)
-    plt.savefig(DATADIR+f"ML_{args.set_name}.pdf")
+#     plt.xlim(0,2000)
+#     plt.savefig(OUTPUT_DIR / f"ML_{args.set_name}.pdf")
 
 """ to check if dataset is being well created"""
-M_max_tes=MR_test.groupby('Modelo').apply(lambda x: x.M.max())
+M_max_tes_pt=MR_test.groupby('Modelo').apply(lambda x: x.M.max())
 grouped_MR_test = MR_test.groupby('Modelo')
 interpolation_dict_test = {
     row_id: interpolate.interp1d(
@@ -415,15 +388,15 @@ interpolation_dict_test = {
     for row_id in test_ID
 }
 
-test_samples_pt=build_samples(test_ID[:10], stdM=0.1, stdR=0.3, rand=True,M_max=M_max_tes,interpolation_dict=interpolation_dict_test,
+test_samples_pt=build_samples(test_ID[:10], stdM=0.1, stdR=0.3, rand=True,M_max=M_max_tes_pt,interpolation_dict=interpolation_dict_test,
                         cov_mode="rho", rho_mode="per_obs_random",
                         rho_low=-0.5, rho_high=0.5)
 # print('test_samples',test_samples[0].keys())
 batch_test = make_batch_from_samples(test_samples_pt)  # one EOS worth of stars
-
 x_test_sys, mask_test =collate_fn(batch_test)
 
-M_max_gp = df.mmax
+
+
 grouped_MR_test = MR_test.groupby('Modelo')
 interpolation_dict_gp_tes = {
     row_id: interpolate.interp1d(
@@ -431,12 +404,11 @@ interpolation_dict_gp_tes = {
         y=grouped_MRL_N.get_group(row_id)['R'],
         kind='linear',
     )
-    for row_id in test_IDgp
-}
+    for row_id in test_IDgp}
+
 test_samples_gp=build_samples(test_IDgp[:10], stdM=0.1, stdR=0.3, rand=True,M_max=M_max_gp,interpolation_dict=interpolation_dict_gp_tes,
                         cov_mode="rho", rho_mode="per_obs_random",
                         rho_low=-0.5, rho_high=0.5)
 # print('test_samples',test_samples[0].keys())
 batch_test = make_batch_from_samples(test_samples_gp)  # one EOS worth of stars
-
 x_test_sys_gp, mask_test_gp =collate_fn(batch_test)

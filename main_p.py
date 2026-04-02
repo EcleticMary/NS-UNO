@@ -21,7 +21,7 @@ scheduler = torch.optim.lr_scheduler.StepLR(
     step_size=800,   # every 1000 epochs
     gamma=0.1        # multiply LR by 0.5
 )
-os.makedirs(DATADIR, exist_ok=True)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
 
@@ -29,13 +29,23 @@ os.makedirs(DATADIR, exist_ok=True)
 S=0
 valid_loss_min = np.inf
 epoch_0=1
+
 if args.load_weights:
-    PATH=glob.glob(f"./model_test/saved_model_{args.set_name}_*.pth")[0]
-    print('PATH of load_weights',PATH)
-    model.load_state_dict(torch.load(PATH,map_location=torch.device('cpu'),weights_only=True)["model"])
-    encoder.load_state_dict(torch.load(PATH,map_location=torch.device('cpu'),weights_only=True)["encoder"])
-    epoch_0=torch.load(PATH,map_location=torch.device('cpu'))["epoch"]+1
+    paths = glob.glob(str(OUTPUT_DIR / f"saved_model_{args.set_name}_*.pth"))
+    # PATH=glob.glob(f"./model_test/saved_model_{args.set_name}_*.pth")[0]
+    if not paths:
+        raise FileNotFoundError(f"No saved model found for {args.set_name} in {OUTPUT_DIR}")
+
+    PATH = paths[0]
+    print("PATH of load_weights", PATH)
+
+    checkpoint = torch.load(PATH, map_location=torch.device("cpu"), weights_only=True)
+    model.load_state_dict(checkpoint["model"])
+    encoder.load_state_dict(checkpoint["encoder"])
+    epoch_0 = checkpoint["epoch"] + epoch_0
+
     print(f"Loaded model from {PATH}, starting at epoch {epoch_0}")
+
 
 for epoch in range(epoch_0,   args.num_epochs + epoch_0):
     model.train()
@@ -44,12 +54,12 @@ for epoch in range(epoch_0,   args.num_epochs + epoch_0):
 
     d_gp=build_samples(train_ID_gp[:100],0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict_gp, M_max=M_max_gp, N_min=5, N_max=40, n_draws=300,
                         rho_low=-0.5, rho_high=0.5)
-    d_pt=build_samples(train_ID_[:100],0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict, M_max=M_max, N_min=5, N_max=40, n_draws=300,
+    d_pt=build_samples(train_ID_[:100],0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict, M_max=M_max_pt, N_min=5, N_max=40, n_draws=300,
                         rho_low=-0.5, rho_high=0.5)
     train_samples=d_pt+d_gp
     d_gp=build_samples(val_ID_gp,0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict_gp, M_max=M_max_gp, N_min=5, N_max=40, n_draws=300,
                         rho_low=-0.5, rho_high=0.5)
-    d_pt=build_samples(val_ID_,0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict, M_max=M_max, N_min=5, N_max=40, n_draws=300,
+    d_pt=build_samples(val_ID_,0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict, M_max=M_max_pt, N_min=5, N_max=40, n_draws=300,
                         rho_low=-0.5, rho_high=0.5)
     
     val_samples=d_pt+d_gp
@@ -72,27 +82,10 @@ for epoch in range(epoch_0,   args.num_epochs + epoch_0):
     #   print('context',ctx,ctx.shape)
       loss,penalt = flow_loss(paramtes.to(device),ctx, model, lambda_penalty=args.lambda_penalty)
       loss.backward()
-
-# ############ ############################################################
-#       print("SetEncoder gradient stats:")
-#       for name, p in encoder.named_parameters():
-#         if p.grad is None:
-#             print(f"  {name}: grad = None")
-#         else:
-#             print(f"  {name}: grad mean = {p.grad.abs().mean().item():.6e}")
-# ############ ############################################################
-#       print("CNF Model gradient stats:")
-#       for name, p in model.named_parameters():
-#         if p.grad is None:
-#             print(f"  {name}: grad = None")
-#         else:
-#             print(f"  {name}: grad mean = {p.grad.abs().mean().item():.6e}")
-
       optimizer.step()
       running_loss += loss.item()
       penalty += penalt.item()
     scheduler.step()
-    batch_loss = 0
 
     with torch.no_grad():
       model.eval()
@@ -100,8 +93,12 @@ for epoch in range(epoch_0,   args.num_epochs + epoch_0):
       val_loss = sum( flow_loss(paramtes.to(device),encoder(data.to(device), mask.to(device)).to(device), model, lambda_penalty=args.lambda_penalty)[0].item() for paramtes, data,mask in val_loader ) / len(val_loader)
     # print('val_loss',val_loss)
     print(f"Epoch {epoch}: loss ",running_loss/len(train_loader), val_loss,f"loss_{args.set_name}.csv",penalty,"LR:", optimizer.param_groups[0]["lr"])
-    pd.DataFrame([[epoch,running_loss/len(train_loader), val_loss,penalty/len(train_loader)]], columns=['epoch','loss', 'val_loss','penalty']).to_csv(os.path.join(DATADIR, f"loss_{args.set_name}.csv"), mode='a', index=False, header=(epoch == 1))
-
+    # pd.DataFrame([[epoch,running_loss/len(train_loader), val_loss,penalty/len(train_loader)]], columns=['epoch','loss', 'val_loss','penalty']).to_csv(os.path.join(OUTPUT_DIR, f"loss_{args.set_name}.csv"), mode='a', index=False, header=(epoch == 1))
+    loss_file = OUTPUT_DIR / f"loss_{args.set_name}.csv"
+    pd.DataFrame(
+        [[epoch, running_loss/len(train_loader), val_loss, penalty/len(train_loader)]],
+        columns=["epoch", "loss", "val_loss", "penalty"]
+    ).to_csv(loss_file, mode="a", index=False, header=not loss_file.exists())
     # Save model if validation loss decreases
     if epoch >50:
         network_learned = val_loss < valid_loss_min
@@ -110,10 +107,10 @@ for epoch in range(epoch_0,   args.num_epochs + epoch_0):
             print(f'Validation Loss Decreased ({ valid_loss_min:.6f} ---> {val_loss:.6f}) \t Saving The Model')
 
             if S != 0:
-                os.remove(os.path.join(DATADIR, f"saved_model_{args.set_name}_{S}.pth"))
+                os.remove(os.path.join(OUTPUT_DIR, f"saved_model_{args.set_name}_{S}.pth"))
             S = epoch   
             valid_loss_min =  val_loss
-            checkpoint_path = os.path.join(DATADIR, f"saved_model_{args.set_name}_{epoch}.pth")
+            checkpoint_path = os.path.join(OUTPUT_DIR, f"saved_model_{args.set_name}_{epoch}.pth")
             checkpoint = {
                 "model": model.state_dict(),
                 "encoder": encoder.state_dict(),
@@ -123,14 +120,14 @@ for epoch in range(epoch_0,   args.num_epochs + epoch_0):
             }
             torch.save(checkpoint, checkpoint_path)
 
-            # torch.save(model.state_dict(), os.path.join(DATADIR, f"saved_model_{args.set_name}_{epoch}.pth"))
+            # torch.save(model.state_dict(), os.path.join(OUTPUT_DIR, f"saved_model_{args.set_name}_{epoch}.pth"))
     # Print total training time
     # -------------------------
     # SAVE RUNNING LOSS PLOT
     # -------------------------
     if epoch % 10 == 0:  # Save every 10 epochs
         plt.figure(figsize=(6,4))
-        df_loss = pd.read_csv(os.path.join(DATADIR, f"loss_{args.set_name}.csv"))
+        df_loss = pd.read_csv(os.path.join(OUTPUT_DIR, f"loss_{args.set_name}.csv"))
         plt.plot( df_loss["loss"], label="Train Loss", color="blue")
         plt.plot( df_loss["val_loss"], label="Val Loss", color="orange")
 
@@ -140,7 +137,7 @@ for epoch in range(epoch_0,   args.num_epochs + epoch_0):
         plt.grid(ls="dotted")
         plt.legend()
 
-        plt.savefig(os.path.join(DATADIR, f"loss_curve_{args.set_name}.pdf"),
+        plt.savefig(os.path.join(OUTPUT_DIR, f"loss_curve_{args.set_name}.pdf"),
                     bbox_inches="tight", dpi=200)
         plt.close()
     # -------------------------
@@ -156,9 +153,9 @@ for epoch in range(epoch_0,   args.num_epochs + epoch_0):
             model, encoder,
             x_test_sys, mask_test,
             x_test_sys_gp, mask_test_gp,pt_eos_index=9,gp_eos_index=9,true_pressure_pt=x_test,true_pressure_gp=x_test_gp,
-            n=n, dataname=args.set_name,outdir=DATADIR,device=device)
-        plot_blops(test_samples_gp[9], MRL_N[MRL_N['ID'].isin([test_samples_gp[9]['row_id']])],dataname=args.set_name+"_pt",outdir=DATADIR)
-        plot_blops(test_samples_pt[9], MR_test[MR_test["Modelo"].isin([x_test.index[9]])],dataname=args.set_name+"_gp",outdir=DATADIR)
+            n=n, dataname=args.set_name,outdir=OUTPUT_DIR,device=device)
+        plot_blops(test_samples_gp[9], MRL_N[MRL_N['ID'].isin([test_samples_gp[9]['row_id']])],dataname=args.set_name+"_gp",outdir=OUTPUT_DIR)
+        plot_blops(test_samples_pt[9], MR_test[MR_test["Modelo"].isin([x_test.index[9]])],dataname=args.set_name+"_pt",outdir=OUTPUT_DIR)
 
 params['time'] = (time.time() - time0) / 60
 print(f'Training: {(time.time() - time0) / 60:.2f} min')

@@ -1,5 +1,6 @@
 data/
 data_gorda/
+model_test/
 __pycache__/
 *.pyc
 .venv/

@@ -1,112 +1,106 @@
 import torch
+from pathlib import Path
+import glob
 import datetime, os
 from torch import nn
 import argparse
 import pickle
-import glob
 
-# --- Configuration ---
+# --- Device configuration ---
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print('Device:', device)
-print('Pytorch:', torch.__version__)
+print(f"Device: {device}")
+print(f"PyTorch: {torch.__version__}")
 
 if torch.cuda.is_available():
-    print(torch.cuda.get_device_name(0))
+    print(f"CUDA device: {torch.cuda.get_device_name(0)}")
 
+# --- Command-line arguments ---
 parser = argparse.ArgumentParser(description="Train Normalizing Flow Model")
-# you have to run on the terminal python3 NF...py --lambda_penalty 0.4 
-parser.add_argument('--lambda_penalty', type=float, default=0.7, help="Regularization weight for monotonicity penalty")
-parser.add_argument('--name', type=str, default="_no_name_", help="name of file")
-argp = parser.parse_args()
-# params = {
-#     'seeds': 12,
-#     'learning_rate': 1e-4,
-#     'activation': nn.ELU(),
-#     'num_epochs': 10,
-#     'log_interval': 2,
-#     'no': 1,  # number of times input vector is repeated
-#     'batch_size': 2,
-#     'context': 50 ,  # context dimension
-#     'dim': 20,  # input dimension
-#     'num_flows': 2,  # number of sub-flows
-#     'mhidden_features': 2,  # neurons in each hidden layer of the ResNet network
-#     'num_layers_block': 3,  # number of ResNet blocks
-#     'lambda_penalty': argp.lambda_penalty,  # regularization parameter
-#     'rand':False, # noise in dataset
-#     'Lambda':False, # if usign tidal deformability
-#     "std_M":0.1,
-#     "std_R":0.3,
-#     "std_L":1,
-#     "simgoidtransform":False,
-#     "load_weights":False,
-#     "set_name_lw":"_p_1", ### ATTENTION if you choose random
-# }
+parser.add_argument(
+    "--lambda_penalty",
+    type=float,
+    default=0.7,
+    help="Regularization weight for monotonicity penalty",
+)
+parser.add_argument(
+    "--name",
+    type=str,
+    default="_no_name_",
+    help="Name used to save output files",
+)
+parser.add_argument("--epochs", type=int, default=2000)
+parser.add_argument("--batch_size", type=int, default=128)
+parser.add_argument("--lr", type=float, default=1e-3)
+args_cli = parser.parse_args()
+
+# --- Default parameters ---
 params = {
-    'seeds': 12,
-    'learning_rate': 1e-3,
-    'activation': nn.ELU(),
-    'num_epochs': 2000,
-    'log_interval': 2,
-    'no': 1,  # number of times input vector is repeated
-    'batch_size': 128,
-    'context': 128 ,  # context dimension
-    'dim': 20,  # input dimension
-    'num_flows': 16,  # number of sub-flows
-    'mhidden_features': 120,  # neurons in each hidden layer of the ResNet network
-    'num_layers_block': 3,  # number of ResNet blocks
-    'lambda_penalty': argp.lambda_penalty,  # regularization parameter
-    'rand':True, # noise in dataset
-    'Lambda':False, # if usign tidal deformability
-    "std_M":0.1,
-    "std_R":0.3,
-    "std_L":1,
-    "simgoidtransform":False,
-    "load_weights":False,
-    "Nmin":5,
-    "Nmax":40,
-    "Nsamples":300,
-    "set_name_lw":"_p_1", ### ATTENTION if you choose random
+    "seed": 12,
+    "activation": nn.ELU(),
+    "num_epochs": args_cli.epochs,
+    "batch_size": args_cli.batch_size,
+    "learning_rate": args_cli.lr,
+    "log_interval": 2,
+    "no": 1,                   # number of times input vector is repeated
+    "context": 128,            # context dimension
+    "dim": 20,                 # input dimension
+    "num_flows": 16,           # number of sub-flows
+    "mhidden_features": 120,   # neurons in each hidden layer
+    "num_layers_block": 3,     # number of ResNet blocks
+    "lambda_penalty": args_cli.lambda_penalty,
+    "rand": True,              # add noise in dataset
+    "Lambda": False,           # use tidal deformability
+    "std_M": 0.1,
+    "std_R": 0.3,
+    "std_L": 1.0,
+    "sigmoid_transform": False,
+    "load_weights": False,
+    "Nmin": 5,
+    "Nmax": 40,
+    "Nsamples": 300,
+    "set_name_lw": "_p_1",
+    "set_name": args_cli.name,
+    "definition": (
+        "First try with CNF_3 with rho per observation random, "
+        "without restricting intervals, now with new method for masking."
+    ),
 }
 
-print('Parameters:', params)
+# --- Derived parameters ---
 params["batch_size"] *= params["no"]
-params["set_name"] = argp.name
-params["Definition"]= "First try with CNF_3 with rho per observation random, where i am not restricting intervals, now with new method for masking "
 
-if params["Lambda"]: params["context"]*=2
-"""  Tenho que melhorar esta parte dos diretorios para ficar mais correto no futuro"""
+if params["Lambda"]:
+    params["context"] *= 2
 
-# Discoteca=input('are you in discoteca')
-Discoteca = os.getenv("DISCO_ANSWER", "yes") 
-print('discoteca',Discoteca)
-if Discoteca=='yes': 
-    DIRDATA_gorda="/data_gorda/"
-    """ This is for using marcio dataset"""
-    DIRDATA_poly="/localdata/CNF_3/CNF_4/data/"
-else: 
-    DIRDATA_gorda="/Users/valeria/Documents/Documentos/PhD_1year/Gorda/"
-    """ This is for using marcio dataset"""
-    DIRDATA_poly="/Users/valeria/Library/CloudStorage/OneDrive-UniversidadedeCoimbra/Documentos/Documentos/PhD_1year/NF_cond/"
-# carefull here with the os.getcwd() because this depends on the directory where you are running your file 
+print("Parameters:")
+for key, value in params.items():
+    print(f"  {key}: {value}")
 
+""" This works perfectly at any machine because it consideres you have a folder data in the same directory of the code, 
+and it will create a folder model_test to save the models, if you want to change this just change the path below"""
 
-DATADIR=os.getcwd()+'/model_test'
-print("DATADIR:",DATADIR)
+BASE_DIR = Path(__file__).resolve().parent
+DATA_POLY_DIR = Path(os.environ.get("CNF4_DATA_POLY", BASE_DIR / "data"))
+DATA_GORDA_DIR = Path(os.environ.get("CNF4_DATA_GORDA", BASE_DIR / "data_gorda"))
+OUTPUT_DIR = Path(os.environ.get("CNF4_OUTPUT_DIR", BASE_DIR / "model_test"))
 
-PATH=glob.glob(DATADIR+"*_"+params["set_name"]+"*")
-print('path is:',PATH)
+print("BASE_DIR:", BASE_DIR)
+print("DATA_POLY_DIR:", DATA_POLY_DIR)
+print("DATA_GORDA_DIR:", DATA_GORDA_DIR)
+print("OUTPUT_DIR:", OUTPUT_DIR)
 
-# to check if i already had define that name to the file
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+PATH = glob.glob(str(OUTPUT_DIR / f"*_{params['set_name']}*"))
+print("path is:", PATH)
 
 if PATH:
-    print('path already exists, please change:', params["set_name"])
-    new_name=input('new name')
-    if new_name=='same':
-        print('keeping the same name:',params["set_name"])
-    else:
-        params["set_name"]=new_name
-os.makedirs(DATADIR, exist_ok=True)
-param_path = os.path.join(DATADIR, "parameters_"+params["set_name"]+".pkl")
+    print("path already exists, please change:", params["set_name"])
+    new_name = input("new name")
+    if new_name != "same":
+        params["set_name"] = new_name
+
+param_path = OUTPUT_DIR / f"parameters_{params['set_name']}.pkl"
 
 with open(param_path, "wb") as f:
     pickle.dump(params, f)
@@ -121,5 +115,5 @@ class dotdict(dict):
     __getattr__ = dict.get
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
-    # Convert dictionary to dotdict
+
 args = dotdict(params)

@@ -6,6 +6,7 @@ import time
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.patches import Ellipse
 
 
 def save_eos_plot_two_datasets(
@@ -96,6 +97,7 @@ def save_eos_plot_two_datasets(
     ax.grid(ls="dotted")
     ax.legend()
     ax.set_title(f"PT",fontsize=12)
+
     # -------- GP --------
     ax = axes[1]
     ax.fill_between(
@@ -123,8 +125,6 @@ def save_eos_plot_two_datasets(
     ax.set_title(f"GP",fontsize=12)
     fig.suptitle(f"EOS predictions at epoch {epoch}", fontsize=16)
     plt.tight_layout()
-    
-    plt.title(f"{dataname}",fontsize=12)
     plt.savefig(
         os.path.join(outdir, f"eos_pred_epoch{epoch}_{dataname}.pdf"),
         bbox_inches="tight",
@@ -133,9 +133,6 @@ def save_eos_plot_two_datasets(
     plt.close()
 
 
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.patches import Ellipse
 def plot_covariance_ellipse(
     mean,
     cov,

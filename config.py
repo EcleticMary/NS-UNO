@@ -39,7 +39,7 @@ params = {
     "seed": 12,
     "activation": nn.ELU(),
     "num_epochs": args_cli.epochs,
-    "batch_size": args_cli.batch_size,
+    "batch_size": args_cli.batch_size*5,
     "learning_rate": args_cli.lr,
     "log_interval": 2,
     "no": 1,                   # number of times input vector is repeated

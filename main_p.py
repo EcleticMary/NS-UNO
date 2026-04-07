@@ -52,9 +52,9 @@ for epoch in range(epoch_0,   args.num_epochs + epoch_0):
     encoder.train()
     # d=dataset_creation(train_ID_[:], val_ID_[:])
 
-    d_gp=build_samples(train_ID_gp[:100],0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict_gp, M_max=M_max_gp, N_min=5, N_max=40, n_draws=300,
+    d_gp=build_samples(train_ID_gp[:],0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict_gp, M_max=M_max_gp, N_min=5, N_max=40, n_draws=300,
                         rho_low=-0.5, rho_high=0.5)
-    d_pt=build_samples(train_ID_[:100],0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict, M_max=M_max_pt, N_min=5, N_max=40, n_draws=300,
+    d_pt=build_samples(train_ID_[:],0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict, M_max=M_max_pt, N_min=5, N_max=40, n_draws=300,
                         rho_low=-0.5, rho_high=0.5)
     train_samples=d_pt+d_gp
     d_gp=build_samples(val_ID_gp,0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict_gp, M_max=M_max_gp, N_min=5, N_max=40, n_draws=300,
@@ -66,7 +66,7 @@ for epoch in range(epoch_0,   args.num_epochs + epoch_0):
     print('train_samples',len(train_samples),'val_samples',len(val_samples))
     train_samples = make_batch_from_samples(train_samples)
     val_samples   = make_batch_from_samples(val_samples)
-    training_set = Dataset(x_train_s[:100],collate_fn(train_samples)[0],collate_fn(train_samples)[1])
+    training_set = Dataset(x_train_s[:],collate_fn(train_samples)[0],collate_fn(train_samples)[1])
     validation_set = Dataset(x_val_s[:],collate_fn(val_samples)[0],collate_fn(val_samples)[1])
     
     train_loader = torch.utils.data.DataLoader(training_set, batch_size=args.batch_size, shuffle=True)

@@ -31,6 +31,7 @@ parser.add_argument(
 parser.add_argument("--epochs", type=int, default=2000)
 parser.add_argument("--batch_size", type=int, default=128)
 parser.add_argument("--lr", type=float, default=1e-3)
+parser.add_argument("--description", type=str, default="No description provided")
 args_cli = parser.parse_args()
 
 # --- Default parameters ---
@@ -60,10 +61,7 @@ params = {
     "Nsamples": 300,
     "set_name_lw": "_p_1",
     "set_name": args_cli.name,
-    "definition": (
-        "First try with CNF_3 with rho per observation random, "
-        "without restricting intervals, now with new method for masking."
-    ),
+    "description": args_cli.description,
 }
 
 # --- Derived parameters ---

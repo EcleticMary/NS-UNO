@@ -42,11 +42,11 @@ params = {
     "learning_rate": args_cli.lr,
     "log_interval": 2,
     "no": 1,                   # number of times input vector is repeated
-    "context": 128,            # context dimension
+    "context": 256,            # context dimension
     "dim": 20,                 # input dimension
     "num_flows": 16,           # number of sub-flows
     "mhidden_features": 120,   # neurons in each hidden layer
-    "num_layers_block": 3,     # number of ResNet blocks
+    "num_layers_block": 5,     # number of ResNet blocks
     "lambda_penalty": args_cli.lambda_penalty,
     "rand": True,              # add noise in dataset
     "Lambda": False,           # use tidal deformability

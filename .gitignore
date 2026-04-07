@@ -3,6 +3,7 @@ data_gorda/
 model_test/
 __pycache__/
 *.pyc
+*.ipynb
 .venv/
 venv/
 .ipynb_checkpoints/

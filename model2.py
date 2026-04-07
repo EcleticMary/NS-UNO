@@ -222,5 +222,5 @@ encoder = HierarchicalDeepSetsEncoder(
     d_hidden=128,
     d_hidden_2=256,
     d_obs=128,
-    d_ctx=128
+    d_ctx=args.context
 ).to(device)

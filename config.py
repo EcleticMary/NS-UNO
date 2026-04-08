@@ -39,7 +39,7 @@ params = {
     "seed": 12,
     "activation": nn.ELU(),
     "num_epochs": args_cli.epochs,
-    "batch_size": args_cli.batch_size*5,
+    "batch_size": args_cli.batch_size*4,
     "learning_rate": args_cli.lr,
     "log_interval": 2,
     "no": 1,                   # number of times input vector is repeated
@@ -47,7 +47,7 @@ params = {
     "dim": 20,                 # input dimension
     "num_flows": 16,           # number of sub-flows
     "mhidden_features": 120,   # neurons in each hidden layer
-    "num_layers_block": 5,     # number of ResNet blocks
+    "num_layers_block": 4,     # number of ResNet blocks
     "lambda_penalty": args_cli.lambda_penalty,
     "rand": True,              # add noise in dataset
     "Lambda": False,           # use tidal deformability

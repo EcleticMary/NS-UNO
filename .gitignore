@@ -4,6 +4,8 @@ model_test/
 __pycache__/
 *.pyc
 *.ipynb
+*.swp
+*.swo
 .venv/
 venv/
 .ipynb_checkpoints/

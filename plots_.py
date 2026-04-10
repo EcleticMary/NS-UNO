@@ -106,8 +106,7 @@ def save_eos_plot_two_datasets(
         np.percentile(pred_samples_gp, 95, axis=0),
         color=color_pred,
         alpha=0.2,
-        label="90% pred. band"
-    )
+        label="90% pred. band")
     ax.plot(
         n,
         np.percentile(pred_samples_gp, 50, axis=0),

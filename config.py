@@ -32,22 +32,22 @@ parser.add_argument("--epochs", type=int, default=2000)
 parser.add_argument("--batch_size", type=int, default=128)
 parser.add_argument("--lr", type=float, default=1e-3)
 parser.add_argument("--description", type=str, default="No description provided")
+parser.add_argument("--both_datasets", action="store_true",help=" you just writte this without bool when to train on both polytropic and GP datasets")
 args_cli = parser.parse_args()
-
 # --- Default parameters ---
 params = {
-    "seed": 12,
+    "seed": 12, 
     "activation": nn.ELU(),
     "num_epochs": args_cli.epochs,
-    "batch_size": args_cli.batch_size*4,
+    "batch_size": args_cli.batch_size*3,
     "learning_rate": args_cli.lr,
     "log_interval": 2,
     "no": 1,                   # number of times input vector is repeated
-    "context": 256,            # context dimension
+    "context": 128,            # context dimension
     "dim": 20,                 # input dimension
     "num_flows": 16,           # number of sub-flows
     "mhidden_features": 120,   # neurons in each hidden layer
-    "num_layers_block": 4,     # number of ResNet blocks
+    "num_layers_block": 3,     # number of ResNet blocks
     "lambda_penalty": args_cli.lambda_penalty,
     "rand": True,              # add noise in dataset
     "Lambda": False,           # use tidal deformability
@@ -58,10 +58,13 @@ params = {
     "load_weights": False,
     "Nmin": 5,
     "Nmax": 40,
+    "Ndefault": 20,
+    "changing_N": False,         # whether to sample a random number of observations for each system
     "Nsamples": 300,
     "set_name_lw": "_p_1",
     "set_name": args_cli.name,
     "description": args_cli.description,
+    "both_datasets": args_cli.both_datasets,
 }
 
 # --- Derived parameters ---

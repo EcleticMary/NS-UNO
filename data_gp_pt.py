@@ -24,9 +24,9 @@ def build_samples(
     M_max,
     interpolation_dict,
     rand=False,
-    N_min=5,
-    N_max=40,
-    n_draws=300,
+    N_min=args.Nmin,
+    N_max=args.Nmax, N_default=args.Ndefault, changing_N=args.changing_N,
+    n_draws=args.Nsamples,
     # --- covariance controls ---
     cov_mode="rho",          # "none" | "rho"
     rho_mode="fixed",        # "fixed" | "global_random" | "per_obs_random" | "normal"
@@ -46,14 +46,14 @@ def build_samples(
     """
     if M_max is None or interpolation_dict is None:
         raise ValueError("You must provide M_max and interpolation_dict.")
-
     rng = np.random.default_rng(seed)
+    N_range=rng.integers(N_min, N_max + 1, size=(len(ID_list), 1)) 
     samples = []
-
+    i=0
     for row_id in ID_list:
         # pick a random number of observations
-        N = rng.integers(N_min, N_max + 1)
-
+        N = N_range[i][0] if changing_N else N_default 
+        i += 1
         # sample latent masses and radii
         M = rng.uniform(1.0, float(M_max.loc[row_id]), size=(N, 1))
         R = interpolation_dict[row_id](M)  # (N,1)
@@ -346,9 +346,16 @@ df=df.loc[np.where(GRo == False)[0]]
 df.index=MRL_N.ID.unique()
 M_max_gp = df.mmax
 
-X_train=pd.concat((x_train,x_train_gp))
-X_val=pd.concat((x_val,x_val_gp))
-X_test=pd.concat((x_test,x_test_gp))
+both_datasets = args.both_datasets
+if both_datasets:
+    X_train=pd.concat((x_train,x_train_gp))
+    X_val=pd.concat((x_val,x_val_gp))
+    X_test=pd.concat((x_test,x_test_gp))
+else:
+    "For now else is just polytropics, but we can easily change it to just GP if we want"
+    X_train=x_train
+    X_val=x_val
+    X_test=x_test
 # D=d[0]+d_gp
 
 

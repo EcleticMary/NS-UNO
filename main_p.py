@@ -7,7 +7,7 @@ is data_utils_p2
 import time
 time0 = time.time()
 from data_gp_pt import *
-from model2 import model, flow_loss, encoder
+from model_2 import model, flow_loss, encoder
 from plots_ import save_eos_plot_two_datasets,plot_blops
 print('data is i main : ',dataname)
 
@@ -52,9 +52,9 @@ for epoch in range(epoch_0,   args.num_epochs + epoch_0):
     encoder.train()
     # d=dataset_creation(train_ID_[:], val_ID_[:])
     if both_datasets:
-        d_gp=build_samples(train_ID_gp[:],0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict_gp, M_max=M_max_gp, N_min=5, N_max=40, n_draws=300,
+        d_gp=build_samples(train_ID_gp[:100],0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict_gp, M_max=M_max_gp, N_min=5, N_max=40, n_draws=300,
                             rho_low=-0.5, rho_high=0.5)
-        d_pt=build_samples(train_ID_[:],0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict, M_max=M_max_pt, N_min=5, N_max=40, n_draws=300,
+        d_pt=build_samples(train_ID_[:100],0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict, M_max=M_max_pt, N_min=5, N_max=40, n_draws=300,
                             rho_low=-0.5, rho_high=0.5)
         train_samples=d_pt+d_gp
         d_gp=build_samples(val_ID_gp,0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict_gp, M_max=M_max_gp, N_min=5, N_max=40, n_draws=300,
@@ -68,7 +68,7 @@ for epoch in range(epoch_0,   args.num_epochs + epoch_0):
                             rho_low=-0.5, rho_high=0.5)
         val_samples=build_samples(val_ID_[:],0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict, M_max=M_max_pt, N_min=5, N_max=40, n_draws=300,
                             rho_low=-0.5, rho_high=0.5)
-    print('train_samples',len(train_samples),train_samples[0]['M'].shape,train_samples[1]['M'].shape,'val_samples',len(val_samples))
+    print('train_samples',x_train_s[:].shape,len(train_samples),train_samples[0]['M'].shape,train_samples[1]['M'].shape,'val_samples',len(val_samples))
     train_samples = make_batch_from_samples(train_samples)
     val_samples   = make_batch_from_samples(val_samples)
     training_set = Dataset(x_train_s[:],collate_fn(train_samples)[0],collate_fn(train_samples)[1])
@@ -84,7 +84,7 @@ for epoch in range(epoch_0,   args.num_epochs + epoch_0):
     #   print('batch_idx',batch_idx,'data',paramtes,'data',data)
       optimizer.zero_grad()
       ctx = encoder(data.to(device), mask.to(device))   
-    #   print('context',ctx,ctx.shape)
+      print('context',ctx,ctx.shape,paramtes.shape)
       loss,penalt = flow_loss(paramtes.to(device),ctx, model, lambda_penalty=args.lambda_penalty)
       loss.backward()
       optimizer.step()

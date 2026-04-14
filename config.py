@@ -32,7 +32,7 @@ parser.add_argument("--epochs", type=int, default=2000)
 parser.add_argument("--batch_size", type=int, default=128)
 parser.add_argument("--lr", type=float, default=1e-3)
 parser.add_argument("--description", type=str, default="No description provided")
-parser.add_argument("--both_datasets", action="store_true",help=" you just writte this without bool when to train on both polytropic and GP datasets")
+parser.add_argument("--both_data", action="store_true",help=" you just writte this without bool when to train on both polytropic and GP datasets")
 args_cli = parser.parse_args()
 # --- Default parameters ---
 params = {
@@ -64,7 +64,7 @@ params = {
     "set_name_lw": "_p_1",
     "set_name": args_cli.name,
     "description": args_cli.description,
-    "both_datasets": args_cli.both_datasets,
+    "both_datasets": args_cli.both_data,
 }
 
 # --- Derived parameters ---

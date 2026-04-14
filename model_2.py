@@ -220,7 +220,7 @@ class HierarchicalDeepSetsEncoder(nn.Module):
         # print('ctx',ctx.shape)
         return ctx
 
-
+print("with attention layer")
 encoder = HierarchicalDeepSetsEncoder(
     d_in=2,
     d_hidden=128,

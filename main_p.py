@@ -52,21 +52,20 @@ for epoch in range(epoch_0,   args.num_epochs + epoch_0):
     encoder.train()
     # d=dataset_creation(train_ID_[:], val_ID_[:])
     if both_datasets:
-        d_gp=build_samples(train_ID_gp[:],0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict_gp, M_max=M_max_gp, N_min=5, N_max=40, n_draws=300,
+        d_gp=build_samples(train_ID_gp[:],0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict_gp, M_max=M_max_gp,
                             rho_low=-0.5, rho_high=0.5)
-        d_pt=build_samples(train_ID_[:],0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict, M_max=M_max_pt, N_min=5, N_max=40, n_draws=300,
+        d_pt=build_samples(train_ID_[:],0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict, M_max=M_max_pt,
                             rho_low=-0.5, rho_high=0.5)
         train_samples=d_pt+d_gp
-        d_gp=build_samples(val_ID_gp,0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict_gp, M_max=M_max_gp, N_min=5, N_max=40, n_draws=300,
+        d_gp=build_samples(val_ID_gp,0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict_gp, M_max=M_max_gp,
                             rho_low=-0.5, rho_high=0.5)
-        d_pt=build_samples(val_ID_,0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict, M_max=M_max_pt, N_min=5, N_max=40, n_draws=300,
-                            rho_low=-0.5, rho_high=0.5)
+        d_pt=build_samples(val_ID_,0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict, M_max=M_max_pt,rho_low=-0.5, rho_high=0.5)
         
         val_samples=d_pt+d_gp
     else:
-        train_samples=build_samples(train_ID_[:],0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict, M_max=M_max_pt, N_min=5, N_max=40, n_draws=300,
+        train_samples=build_samples(train_ID_[:],0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict, M_max=M_max_pt,
                             rho_low=-0.5, rho_high=0.5)
-        val_samples=build_samples(val_ID_[:],0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict, M_max=M_max_pt, N_min=5, N_max=40, n_draws=300,
+        val_samples=build_samples(val_ID_[:],0.1,0.3, rand=True, cov_mode="rho", rho_mode="per_obs_random",interpolation_dict=interpolation_dict, M_max=M_max_pt,
                             rho_low=-0.5, rho_high=0.5)
     print('train_samples',x_train_s[:].shape,len(train_samples),train_samples[0]['M'].shape,train_samples[1]['M'].shape,'val_samples',len(val_samples))
     train_samples = make_batch_from_samples(train_samples)

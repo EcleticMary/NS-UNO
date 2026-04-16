@@ -163,6 +163,7 @@ class MLP(nn.Module):
         return self.net(x)
 
 class AttentionPool(nn.Module):
+    
     def __init__(self, d_in, d_attn=128):
         super().__init__()
         self.score_net = nn.Sequential(

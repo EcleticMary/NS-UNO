@@ -1,6 +1,7 @@
 data/
 data_gorda/
 model_test/
+plots_/
 __pycache__/
 *.pyc
 *.ipynb
@@ -9,3 +10,4 @@ __pycache__/
 .venv/
 venv/
 .ipynb_checkpoints/
+pQCD.py

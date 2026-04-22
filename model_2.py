@@ -162,8 +162,31 @@ class MLP(nn.Module):
     def forward(self, x):
         return self.net(x)
 
-class AttentionPool(nn.Module):
+# class AttentionPool(nn.Module):
     
+#     def __init__(self, d_in, d_attn=128):
+#         super().__init__()
+#         self.score_net = nn.Sequential(
+#             nn.Linear(d_in, d_attn),
+#             nn.Tanh(),
+#             nn.Linear(d_attn, 1)
+#         )
+
+#     def forward(self, x, mask):
+#         """
+#         x:    (B, O, D)
+#         mask: (B, O) bool
+#         """
+#         scores = self.score_net(x).squeeze(-1)   # (B, O)
+#         scores = scores.masked_fill(~mask, -1e9)
+
+#         attn = torch.softmax(scores, dim=1)      # (B, O)
+#         attn = attn * mask.to(attn.dtype)
+#         attn = attn / (attn.sum(dim=1, keepdim=True) + 1e-8)
+
+#         pooled = torch.sum(attn.unsqueeze(-1) * x, dim=1)  # (B, D)
+#         return pooled, attn
+class AttentionPool(nn.Module):
     def __init__(self, d_in, d_attn=128):
         super().__init__()
         self.score_net = nn.Sequential(
@@ -174,17 +197,20 @@ class AttentionPool(nn.Module):
 
     def forward(self, x, mask):
         """
-        x:    (B, O, D)
-        mask: (B, O) bool
+        x:    (..., N, D)
+        mask: (..., N) bool
+        returns:
+            pooled: (..., D)
+            attn:   (..., N)
         """
-        scores = self.score_net(x).squeeze(-1)   # (B, O)
-        scores = scores.masked_fill(~mask, -1e9)
+        scores = self.score_net(x).squeeze(-1)   # (..., N)
+        scores = scores.masked_fill(~mask.bool(), -1e9)
 
-        attn = torch.softmax(scores, dim=1)      # (B, O)
+        attn = torch.softmax(scores, dim=-1)     # (..., N)
         attn = attn * mask.to(attn.dtype)
-        attn = attn / (attn.sum(dim=1, keepdim=True) + 1e-8)
+        attn = attn / (attn.sum(dim=-1, keepdim=True) + 1e-8)
 
-        pooled = torch.sum(attn.unsqueeze(-1) * x, dim=1)  # (B, D)
+        pooled = torch.sum(attn.unsqueeze(-1) * x, dim=-2)  # (..., D)
         return pooled, attn
     
 class HierarchicalDeepSetsEncoder(nn.Module):
@@ -221,6 +247,38 @@ class HierarchicalDeepSetsEncoder(nn.Module):
         # print('ctx',ctx.shape)
         return ctx
 
+class HierarchicalDeepSetsEncoder(nn.Module):
+    def __init__(self, d_in=2, d_hidden=128, d_hidden_2=256, d_obs=128, d_ctx=128):
+        super().__init__()
+
+        self.phi1 = MLP(d_in, d_hidden, d_hidden)
+        self.attn_pool1 = AttentionPool(d_hidden, d_attn=128)
+        self.rho1 = MLP(d_hidden, d_hidden, d_obs)
+
+        self.phi2 = MLP(d_obs, d_hidden, d_hidden_2)
+
+        self.attn_pool2 = AttentionPool(d_hidden_2, d_attn=128)
+        self.rho2 = MLP(d_hidden_2, d_hidden_2, d_ctx)
+
+    def forward(self, x_padded, mask):
+        # x_padded: (B,O,S,d_in)
+        # mask:     (B,O,S)
+
+        h = self.phi1(x_padded)                    # (B,O,S,d_hidden)
+
+        h_obs_pre, attn1 = self.attn_pool1(h, mask)  # (B,O,d_hidden)
+
+        h_obs = self.rho1(h_obs_pre)              # (B,O,d_obs)
+
+        obs_mask = mask.any(dim=2)                # (B,O)
+        h_obs = h_obs * obs_mask.unsqueeze(-1).to(h_obs.dtype)
+
+        u = self.phi2(h_obs)                      # (B,O,d_hidden_2)
+
+        pooled, attn2 = self.attn_pool2(u, obs_mask)  # (B,d_hidden_2)
+
+        ctx = self.rho2(pooled)                   # (B,d_ctx)
+        return ctx
 print("with attention layer")
 encoder = HierarchicalDeepSetsEncoder(
     d_in=2,

@@ -17,6 +17,28 @@ with open(param_path, 'w') as data:
 torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
+def sample_masses_stratified(N, rng, Mmin=1.0, Mmax=2.1):
+    bins = [
+        (Mmin, 1.4),
+        (1.4, 1.8),
+        (1.8, Mmax),
+    ]
+
+    nbins = 3
+
+    counts = np.ones(nbins, dtype=int)
+    print('bins',counts)
+    counts += rng.multinomial(N - nbins, [1/3, 1/3, 1/3])
+    print('2',counts)
+    masses = []
+    for c, (a, b) in zip(counts, bins):
+        masses.append(rng.uniform(a, b, size=(c, 1)))
+
+    masses = np.concatenate(masses, axis=0)
+    # rng.shuffle(masses, axis=0)
+
+    return masses
+
 def build_samples(
     ID_list,
     stdM,
@@ -55,7 +77,14 @@ def build_samples(
         N = N_range[i][0] if changing_N else N_default 
         i += 1
         # sample latent masses and radii
-        M = rng.uniform(1.0, float(M_max.loc[row_id]), size=(N, 1))
+        # M = rng.uniform(1.0, float(M_max.loc[row_id]), size=(N, 1))
+        # With mass stratification for intervals [1.0,1.4], [1.4,1.8], [1.8,Mmax]
+        M = sample_masses_stratified(
+            N=N,
+            rng=rng,
+            Mmin=1.0,
+            Mmax=float(M_max.loc[row_id])
+        )
         R = interpolation_dict[row_id](M)  # (N,1)
 
         if not rand:
@@ -360,6 +389,7 @@ else:
 
 
 x_train_s,x_val_s= np.log10(X_train.astype('float32')),np.log10(X_val.astype('float32'))
+
 x_train_s,x_val_s=pd.DataFrame(np.repeat(x_train_s,args.no,axis=0)).values,pd.DataFrame(np.repeat(x_val_s,args.no,axis=0)).values
 
 """ to check if dataset is being well created"""

@@ -247,38 +247,6 @@ class HierarchicalDeepSetsEncoder(nn.Module):
         # print('ctx',ctx.shape)
         return ctx
 
-class HierarchicalDeepSetsEncoder(nn.Module):
-    def __init__(self, d_in=2, d_hidden=128, d_hidden_2=256, d_obs=128, d_ctx=128):
-        super().__init__()
-
-        self.phi1 = MLP(d_in, d_hidden, d_hidden)
-        self.attn_pool1 = AttentionPool(d_hidden, d_attn=128)
-        self.rho1 = MLP(d_hidden, d_hidden, d_obs)
-
-        self.phi2 = MLP(d_obs, d_hidden, d_hidden_2)
-
-        self.attn_pool2 = AttentionPool(d_hidden_2, d_attn=128)
-        self.rho2 = MLP(d_hidden_2, d_hidden_2, d_ctx)
-
-    def forward(self, x_padded, mask):
-        # x_padded: (B,O,S,d_in)
-        # mask:     (B,O,S)
-
-        h = self.phi1(x_padded)                    # (B,O,S,d_hidden)
-
-        h_obs_pre, attn1 = self.attn_pool1(h, mask)  # (B,O,d_hidden)
-
-        h_obs = self.rho1(h_obs_pre)              # (B,O,d_obs)
-
-        obs_mask = mask.any(dim=2)                # (B,O)
-        h_obs = h_obs * obs_mask.unsqueeze(-1).to(h_obs.dtype)
-
-        u = self.phi2(h_obs)                      # (B,O,d_hidden_2)
-
-        pooled, attn2 = self.attn_pool2(u, obs_mask)  # (B,d_hidden_2)
-
-        ctx = self.rho2(pooled)                   # (B,d_ctx)
-        return ctx
 print("with attention layer")
 encoder = HierarchicalDeepSetsEncoder(
     d_in=2,
@@ -287,3 +255,36 @@ encoder = HierarchicalDeepSetsEncoder(
     d_obs=128,
     d_ctx=args.context
 ).to(device)
+
+# class HierarchicalDeepSetsEncoder(nn.Module):
+#     def __init__(self, d_in=2, d_hidden=128, d_hidden_2=256, d_obs=128, d_ctx=128):
+#         super().__init__()
+
+#         self.phi1 = MLP(d_in, d_hidden, d_hidden)
+#         self.attn_pool1 = AttentionPool(d_hidden, d_attn=128)
+#         self.rho1 = MLP(d_hidden, d_hidden, d_obs)
+
+#         self.phi2 = MLP(d_obs, d_hidden, d_hidden_2)
+
+#         self.attn_pool2 = AttentionPool(d_hidden_2, d_attn=128)
+#         self.rho2 = MLP(d_hidden_2, d_hidden_2, d_ctx)
+
+#     def forward(self, x_padded, mask):
+#         # x_padded: (B,O,S,d_in)
+#         # mask:     (B,O,S)
+
+#         h = self.phi1(x_padded)                    # (B,O,S,d_hidden)
+
+#         h_obs_pre, attn1 = self.attn_pool1(h, mask)  # (B,O,d_hidden)
+
+#         h_obs = self.rho1(h_obs_pre)              # (B,O,d_obs)
+
+#         obs_mask = mask.any(dim=2)                # (B,O)
+#         h_obs = h_obs * obs_mask.unsqueeze(-1).to(h_obs.dtype)
+
+#         u = self.phi2(h_obs)                      # (B,O,d_hidden_2)
+
+#         pooled, attn2 = self.attn_pool2(u, obs_mask)  # (B,d_hidden_2)
+
+#         ctx = self.rho2(pooled)                   # (B,d_ctx)
+#         return ctx

@@ -1,13 +1,17 @@
 data/
 data_gorda/
 model_test/
+GW_obs/
 plots_/
 __pycache__/
 *.pyc
 *.ipynb
 *.swp
 *.swo
+*.pdf
+*.dat
 .venv/
 venv/
+data_prediction/
 .ipynb_checkpoints/
 pQCD.py

@@ -57,9 +57,9 @@ params = {
     "sigmoid_transform": False,
     "load_weights": False,
     "Nmin": 5,
-    "Nmax": 40,
+    "Nmax": 30,
     "Ndefault": 20,
-    "changing_N": False,         # whether to sample a random number of observations for each system
+    "changing_N": True,         # whether to sample a random number of observations for each system
     "Nsamples": 300,
     "set_name_lw": "_p_1",
     "set_name": args_cli.name,

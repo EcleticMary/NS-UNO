@@ -27,9 +27,9 @@ def sample_masses_stratified(N, rng, Mmin=1.0, Mmax=2.1):
     nbins = 3
 
     counts = np.ones(nbins, dtype=int)
-    print('bins',counts)
+
     counts += rng.multinomial(N - nbins, [1/3, 1/3, 1/3])
-    print('2',counts)
+
     masses = []
     for c, (a, b) in zip(counts, bins):
         masses.append(rng.uniform(a, b, size=(c, 1)))
@@ -44,7 +44,7 @@ def build_samples(
     stdM,
     stdR,
     M_max,
-    interpolation_dict,
+    interpolation_dict,sigma_mode=args.sigma_mode,
     rand=False,
     N_min=args.Nmin,
     N_max=args.Nmax, N_default=args.Ndefault, changing_N=args.changing_N,
@@ -94,8 +94,16 @@ def build_samples(
             continue
 
         # per-observation uncertainties (N,1)
-        std_M = rng.uniform(0.05, stdM, size=(N, 1))
-        std_R = rng.uniform(0.1, stdR, size=(N, 1))
+        if sigma_mode == "per_obs":
+            std_M = rng.uniform(0.05, stdM, size=(N,1))
+            std_R = rng.uniform(0.1, stdR, size=(N,1))
+
+        elif sigma_mode == "per_eos":
+            sigma_M_eos = rng.uniform(0.05, stdM)
+            sigma_R_eos = rng.uniform(0.1, stdR)
+
+            std_M = np.full((N,1), sigma_M_eos)
+            std_R = np.full((N,1), sigma_R_eos)
 
         # draw correlation(s) rho in a safe way
         if cov_mode == "none":

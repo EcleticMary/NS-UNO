@@ -29,9 +29,11 @@ parser.add_argument(
     help="Name used to save output files",
 )
 parser.add_argument("--epochs", type=int, default=2000)
+parser.add_argument("--sigma_mode", type=str, default="per_eos", help="Mode for setting noise levels: 'per_eos' or 'constant'")
 parser.add_argument("--batch_size", type=int, default=128)
 parser.add_argument("--lr", type=float, default=1e-3)
 parser.add_argument("--description", type=str, default="No description provided")
+
 parser.add_argument("--both_data", action="store_true",help=" you just writte this without bool when to train on both polytropic and GP datasets")
 args_cli = parser.parse_args()
 # --- Default parameters ---
@@ -41,6 +43,7 @@ params = {
     "num_epochs": args_cli.epochs,
     "batch_size": args_cli.batch_size*3,
     "learning_rate": args_cli.lr,
+    "sigma_mode": args_cli.sigma_mode,
     "log_interval": 2,
     "no": 1,                   # number of times input vector is repeated
     "context": 128,            # context dimension

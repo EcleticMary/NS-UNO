@@ -1,0 +1,1 @@
+NS-UNO stands for Neutron Star EoS Inference from an Unconstrained Number of Observation[Cópia de Every neutron star plays its part. (2).pdf](https://github.com/user-attachments/files/30880611/Copia.de.Every.neutron.star.plays.its.part.2.pdf)

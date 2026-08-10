@@ -12,5 +12,4 @@ distribution of the EoS conditioned on neutron-star observables such as
 mass, radius, and tidal deformability.
 
 ## Overview
-
-[**Every neutron star plays its part**](https://github.com/user-attachments/files/30880660/Copia.de.Every.neutron.star.plays.its.part.2.pdf)
+![NS-UNO overview](figures/scheme_ns_uno2.pdf)

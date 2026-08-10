@@ -13,6 +13,7 @@
 
 ## Overview
 
-NS-UNO is a simulation-based inference framework for reconstructing the
-neutron-star equation of state (EoS) from observations of an unconstrained
+NS-UNO is a simulation based inference framework for reconstructing the
+neutron star equation of state (EoS) from observations of an unconstrained
 number of neutron stars.
+  

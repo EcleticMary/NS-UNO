@@ -20,6 +20,8 @@ The framework combines a **hierarchical DeepSets architecture** with a **conditi
 
 NS-UNO is designed for the increasingly diverse multimessenger observations expected from current and next-generation neutron star observations.
 
+This repository contains the code used for the results presented in the associated paper.
+
 ---
 
 ## Paper
@@ -46,16 +48,12 @@ NS-UNO combines a hierarchical DeepSets model with a conditional normalising flo
 The NS-UNO framework consists of two main components:
 
 1. **Hierarchical DeepSets**
-   Processes an unconstrained number of neutron star observations while preserving permutation invariance.
+   Processes a variable number of neutron star observations while preserving permutation invariance.
 
 2. **Conditional Normalizing Flow**
    Maps the encoded observational information to the posterior distribution of the neutron star EoS.
 
-This allows the same model to be applied to different numbers of observed neutron stars without retraining the model for each observation count.
-
-<p align="center">
-  <img src="scheme_UNO_NS.png" width="850">
-</p>
+This allows the same trained model to be applied to different numbers of observed neutron stars without retraining the model for each observation count.
 
 ---
 
@@ -66,7 +64,7 @@ The framework is trained using multiple classes of neutron star EoS models, incl
 * **Piecewise-polytropic (PT) EoSs**
 * **Non-parametric Gaussian-process (GP) EoSs**
 
-Training on both parameterised and non-parametric EoS families allows the model to learn a broader representation of the possible neutron star EoS space.
+Training on both parameterized and non-parametric EoS families allows the model to learn a broader representation of the possible neutron star EoS space.
 
 ---
 
@@ -80,7 +78,7 @@ NS-UNO is designed to work with sets of neutron star observations, including:
 * Different numbers of observed neutron stars
 * Observations with different levels of uncertainty
 
-The number of observations is not fixed during inference, allowing the framework to naturally incorporate additional neutron stars as new observations become available.
+The number of observations is not fixed during inference, allowing the framework to incorporate additional neutron stars without requiring a separate model for each observation count.
 
 ---
 
@@ -89,30 +87,61 @@ The number of observations is not fixed during inference, allowing the framework
 ```text
 NS-UNO/
 │
-├── *.py                 # Source code
-├── scheme_UNO_NS.png    # NS-UNO framework schematic
-├── ...
+├── data_gp_pt.py       # Dataset preparation and generation
+├── model.py            # Hierarchical encoder and conditional normalizing flow
+├── main_p.py           # Model training and evaluation
+├── plots_.py           # Plotting and visualization utilities
+├── scheme_UNO_NS.png   # NS-UNO framework schematic
+├── requirements.txt    # Python dependencies
+└── README.md
 ```
 
 Large datasets, generated results, plots, model checkpoints, and other generated files are excluded from version control through `.gitignore`.
 
 ---
 
-## Requirements
+## Installation
 
-The code is based primarily on Python and PyTorch.
+Clone the repository and create a Python environment:
 
-Main dependencies include:
+```bash
+git clone <YOUR-GITHUB-REPOSITORY-URL>
+cd NS-UNO
+```
 
-* Python
-* PyTorch
-* NumPy
-* SciPy
-* scikit-learn
-* nflows
-* Matplotlib
+Install the required Python packages with:
 
-A complete list of dependencies can be provided in `requirements.txt`.
+```bash
+pip install -r requirements.txt
+```
+
+The code is developed using Python and PyTorch. The complete list of Python dependencies is provided in `requirements.txt`.
+
+> **Note:** PyTorch installation may depend on whether the code is run on a CPU or a CUDA-enabled system. The `requirements.txt` file records the environment used for the experiments reported in the paper.
+
+---
+
+## Data
+
+The large EoS datasets and generated observational datasets are not included in this repository.
+
+The code in `data_gp_pt.py` contains the data preparation and mock-observation generation procedures used in the analysis.
+
+Please refer to the paper for the details of the EoS ensembles, observational data, preprocessing, and noise models.
+
+---
+
+## Usage
+
+The main workflow consists of:
+
+1. Preparing the EoS datasets and mock observations.
+2. Initializing the hierarchical DeepSets encoder and conditional normalizing flow.
+3. Training the model using `main_p.py`.
+4. Evaluating the reconstructed EoS and posterior samples.
+5. Generating the corresponding plots.
+
+The training configuration and data paths should be adapted to the local environment before running the code.
 
 ---
 
@@ -133,4 +162,8 @@ If you use NS-UNO in your research, please cite:
 }
 ```
 
+---
 
+## License
+
+This repository is released under the terms of the license specified in `LICENSE`.

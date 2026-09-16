@@ -2,7 +2,7 @@
 ### Neutron Star EoS Inference from an Unconstrained Number of Observations
 
 <p align="center">
-  <img src="scheme_ns_uno.png" width="850">
+  <img src="scheme_UNO_NS.png" width="850">
 </p>
 
 <p align="center">

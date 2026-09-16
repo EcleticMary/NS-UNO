@@ -95,6 +95,7 @@ def build_samples(
 
         # per-observation uncertainties (N,1)
         if sigma_mode == "per_obs":
+            print('per_obs')
             std_M = rng.uniform(0.05, stdM, size=(N,1))
             std_R = rng.uniform(0.1, stdR, size=(N,1))
 

@@ -83,7 +83,7 @@ for epoch in range(epoch_0,   args.num_epochs + epoch_0):
     #   print('batch_idx',batch_idx,'data',paramtes,'data',data)
       optimizer.zero_grad()
       ctx = encoder(data.to(device), mask.to(device))   
-      print('context',ctx,ctx.shape,paramtes.shape)
+    #   print('context',ctx,ctx.shape,paramtes.shape)
       loss,penalt = flow_loss(paramtes.to(device),ctx, model, lambda_penalty=args.lambda_penalty)
       loss.backward()
       optimizer.step()

@@ -144,10 +144,10 @@ def masked_mean_second(x, mask, dim, eps=1e-6):
 
     mean = x_masked.sum(dim=dim) / denom
     second = (x_masked ** 2).sum(dim=dim) / denom
-    return torch.cat([mean, second], dim=-1)
-    # var = torch.clamp(second - mean**2, min=eps)
+    # return torch.cat([mean, second], dim=-1)
+    var = torch.clamp(second - mean**2, min=eps)
     # return torch.cat([mean, var], dim=-1)
-    # return torch.cat([mean, torch.sqrt(var)], dim=-1)
+    return torch.cat([mean, torch.sqrt(var)], dim=-1)
 
 
 
